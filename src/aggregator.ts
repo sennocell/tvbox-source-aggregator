@@ -92,7 +92,9 @@ async function _runAggregation(storage: Storage, config: AppConfig, startTime: n
 }
 
 /**
- * 处理 MacCMS 源：并发验证 + 过滤不可达站点
+ * 处理 MacCMS 源：
+ * - CF 版（有 workerBaseUrl）：直接转换，API 指向代理路由
+ * - 本地版（无 workerBaseUrl）：并发验证 + 过滤不可达站点
  */
 async function processMacCMSSources(
   storage: Storage,
@@ -107,15 +109,25 @@ async function processMacCMSSources(
   }
 
   console.log(`[aggregation] ${entries.length} MacCMS sources found`);
-  console.log('[aggregation] Validating MacCMS sources...');
-  const validEntries = await processMacCMSForLocal(entries, config.siteTimeoutMs);
+
+  let validEntries: MacCMSSourceEntry[];
+
+  if (config.workerBaseUrl) {
+    // CF 版：跳过验证，代理本身就是可用性保证
+    console.log('[aggregation] CF mode: skipping MacCMS validation, using proxy URLs');
+    validEntries = entries;
+  } else {
+    // 本地版：并发验证，过滤不可达站点
+    console.log('[aggregation] Local mode: validating MacCMS sources...');
+    validEntries = await processMacCMSForLocal(entries, config.siteTimeoutMs);
+  }
 
   if (validEntries.length === 0) {
-    console.warn('[aggregation] No valid MacCMS sources after validation');
+    console.warn('[aggregation] No valid MacCMS sources after processing');
     return [];
   }
 
-  const sites = macCMSToTVBoxSites(validEntries);
+  const sites = macCMSToTVBoxSites(validEntries, config.workerBaseUrl);
   console.log(`[aggregation] Converted ${sites.length} MacCMS sources to TVBoxSites`);
 
   return [{

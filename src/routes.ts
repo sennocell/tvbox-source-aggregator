@@ -144,6 +144,37 @@ export function createApp(deps: AppDeps): Hono {
     return c.json({ success: true });
   });
 
+  // ─── MacCMS 边缘代理（仅 CF 版）──────────────────────
+  if (config.workerBaseUrl) {
+    app.all('/api/:key', async (c) => {
+      const key = c.req.param('key');
+      const raw = await storage.get(KV_MACCMS_SOURCES);
+      const sources: MacCMSSourceEntry[] = raw ? JSON.parse(raw) : [];
+      const source = sources.find((s) => s.key === key);
+
+      if (!source) {
+        return c.json({ error: 'Unknown MacCMS source' }, 404);
+      }
+
+      try {
+        const targetUrl = new URL(source.api);
+        const reqUrl = new URL(c.req.url);
+        reqUrl.searchParams.forEach((v, k) => targetUrl.searchParams.set(k, v));
+
+        const resp = await fetch(targetUrl.toString());
+        const data = await resp.json();
+
+        return c.json(data, 200, {
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'public, max-age=300',
+        });
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return c.json({ error: msg }, 502);
+      }
+    });
+  }
+
   // ─── MacCMS Admin API ─────────────────────────────────
   app.get('/admin/maccms', async (c) => {
     if (!verifyAdmin(c.req.raw, config)) {

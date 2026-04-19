@@ -121,4 +121,5 @@ export interface AppConfig {
   siteTimeoutMs: number;
   fetchTimeoutMs: number;
   cronSchedule?: string;
+  workerBaseUrl?: string;  // CF 版设置，如 "https://tvbox.example.com"；本地不设置
 }
