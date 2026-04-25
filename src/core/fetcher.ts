@@ -1,6 +1,6 @@
 // 批量 fetch TVBox JSON 配置
 
-import { DEFAULT_FETCH_TIMEOUT_MS, TVBOX_UA } from './config';
+import { DEFAULT_FETCH_TIMEOUT_MS, TVBOX_UA, BROWSER_UA } from './config';
 import { decodeConfigResponse } from './decoder';
 import type { TVBoxConfig, SourcedConfig, SourceEntry, SourceFetchResult } from './types';
 
@@ -116,6 +116,24 @@ async function fetchSingleConfig(
   source: SourceEntry,
   timeoutMs: number,
 ): Promise<SingleFetchResult> {
+  // 双 UA 回退：先用 okhttp（TVBox 原生），解析失败换浏览器 UA 重试
+  const result = await fetchWithUA(source, timeoutMs, TVBOX_UA);
+  if (result.config) return result;
+
+  // okhttp 失败 → 浏览器 UA 重试（部分源只接受浏览器 UA）
+  if (result.fetchResult.status === 'parse_error' || result.fetchResult.status === 'decode_error') {
+    console.log(`[fetcher] Retrying ${source.url} with browser UA`);
+    return fetchWithUA(source, timeoutMs, BROWSER_UA);
+  }
+
+  return result;
+}
+
+async function fetchWithUA(
+  source: SourceEntry,
+  timeoutMs: number,
+  userAgent: string,
+): Promise<SingleFetchResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -125,7 +143,7 @@ async function fetchSingleConfig(
       signal: controller.signal,
       headers: {
         'Accept': 'application/json, text/plain, */*',
-        'User-Agent': TVBOX_UA,
+        'User-Agent': userAgent,
       },
     });
 

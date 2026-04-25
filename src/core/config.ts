@@ -36,8 +36,10 @@ export const KV_SOURCE_HEALTH = 'source_health';
 // 站点测速开关（默认启用）
 export const KV_SPEED_TEST_ENABLED = 'speed_test_enabled';
 
-// TVBox 标准浏览器 UA（与 TVBox-Pro 播放器一致）
-export const TVBOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.54 Safari/537.36';
+// TVBox 客户端 UA（源服务器按此 UA 返回 JSON 而非 HTML）
+export const TVBOX_UA = 'okhttp/3.12.0';
+// 浏览器 UA 回退（部分源只接受浏览器 UA）
+export const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.54 Safari/537.36';
 
 // 定时任务间隔（分钟）
 export const KV_CRON_INTERVAL = 'cron_interval';
